@@ -1,36 +1,17 @@
 using System;
 
 [Serializable]
-public enum ArmamentName
-{
-    None,
-    Pylon,
-    AGM65F,
-    AGM65E,
-    AGM84,
-    AGM84E,
-    Aim7,
-    Aim9,
-    Aim120C,
-    Mk82,
-    Mk83,
-    Tank330,
-    Tank480,
-    TGTFLIR,
-    NAVFLIR
-}
-
-[Serializable]
-public enum ArmamentType
+public enum EquipmentType
 {
     Missile,
     CruiseMissile,
     GuidedRocket,
     UnguidedRocket,
     GuidedBomb,
-    UnguidedBomb, 
+    UnguidedBomb,
     FuelTank,
-    TargetingPod
+    TargetingPod,
+    Pylon
 }
 
 [Serializable]
@@ -41,12 +22,7 @@ public enum SeekerType
     Radar
 }
 
-public enum PlaneName
-{
-    FA18C,
-    A10C
-}
-
+[Serializable]
 public enum PlaneState
 {
     ColdAndDark,
@@ -54,7 +30,10 @@ public enum PlaneState
     Approach
 }
 
-public enum MapName
+[Serializable]
+public enum DistanceUnits
 {
-    Default
+    Meter,
+    Feet,
+    NauticalMile
 }
