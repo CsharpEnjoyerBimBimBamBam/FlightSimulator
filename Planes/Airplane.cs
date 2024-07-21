@@ -2,26 +2,21 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System;
+using System.Linq;
+using System.IO;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using System.Reflection;
 
-public class Airplane : MonoBehaviour
+public class Airplane : FlyingObject
 {
-    public PlaneName Name { get; protected set; }
-    public List<WeaponStation> WeaponStations { get; protected set; }
-    public float MaxFuelMass { get; protected set; }
-    public float EmptyWeight { get; protected set; }
-    public float MaxWeight { get; protected set; }
-    public Vector3 EmptyCenterOfMass { get; protected set; }
-    public Vector3 CenterOfLift { get; protected set; }
-    public List<FuelTank> InternalFuelTanks = new List<FuelTank>();
-    public List<AirplaneArmament> Armament;
-    public PlaneState CurrentState;
-    public Rigidbody rigidBody;
+    public AirplaneParameters Parameters { get; private set; } = new AirplaneParameters();
     public float FuelMass
     {
         get
         {
             float _FuelMass = 0;
-            foreach (FuelTank _Tank in InternalFuelTanks)
+            foreach (FuelTank _Tank in Parameters.InternalFuelTanks)
             {
                 _FuelMass += _Tank.CurrentWeight;
             }
@@ -33,27 +28,34 @@ public class Airplane : MonoBehaviour
         get
         {
             float _ArmamentMass = 0;
-            foreach (AirplaneArmament _Armament in Armament)
+            foreach (WeaponStation Station in Parameters.WeaponStations)
             {
-                _ArmamentMass += _Armament.Mass;
+                if (!Station.IsHaveEquipment)
+                    continue;
+
+                _ArmamentMass += Station.CurrentEquipment.Mass;
             }
             return _ArmamentMass;
         }
     }
-    public float TotalWeight { get { return EmptyWeight + FuelMass + ArmamentMass; } }
+    public float TotalWeight => Parameters.EmptyWeight + FuelMass + ArmamentMass;
+    private static Dictionary<string, string> _AirplanesData = new Dictionary<string, string>();
 
     public void RecalculateTotalWeight()
     {
-        rigidBody.mass = EmptyWeight + FuelMass + ArmamentMass;
+        if (Rigidbody == null)
+            Start();
+
+        Rigidbody.mass = TotalWeight;
     }
 
     public void RecalculateCenterOfMass(bool WithArmaments = false)
     {
-        Vector3 _CenterOfMass = EmptyCenterOfMass * EmptyWeight;
+        Vector3 _CenterOfMass = Parameters.EmptyCenterOfMass * Parameters.EmptyWeight;
         float _FuelMass = 0;
         float _ArmamentMass = 0;
 
-        foreach (FuelTank _Tank in InternalFuelTanks)
+        foreach (FuelTank _Tank in Parameters.InternalFuelTanks)
         {
             _CenterOfMass += _Tank.LocalPosition * _Tank.CurrentWeight;
             _FuelMass += _Tank.CurrentWeight;
@@ -61,47 +63,71 @@ public class Airplane : MonoBehaviour
 
         if (WithArmaments)
         {
-            foreach (AirplaneArmament _Armament in Armament)
+            foreach (WeaponStation Station in Parameters.WeaponStations)
             {
-                _CenterOfMass += _Armament.gameObject.transform.localPosition * _Armament.Mass;
-                _ArmamentMass += _Armament.Mass;
+                if (!Station.IsHaveEquipment)
+                    continue;
+
+                _CenterOfMass += Station.LocalPosition * Station.CurrentEquipment.Mass;
+                _ArmamentMass += Station.CurrentEquipment.Mass;
             }
         }
-        rigidBody.centerOfMass = _CenterOfMass / (EmptyWeight + _FuelMass + _ArmamentMass);
+        if (Rigidbody == null)
+            Start();
+        Rigidbody.centerOfMass = _CenterOfMass / (Parameters.EmptyWeight + _FuelMass + _ArmamentMass);
     }
 
-    public GameObject LoadGameObject()
-    {
-        return Resources.Load<GameObject>("Planes/" + Name.ToString());
-    }
+    public static GameObject LoadPrefab(string _Name) => Resources.Load<GameObject>(ResourcesPath.Planes + _Name);
 
-    public static GameObject LoadGameObject(PlaneName _Name)
-    {
-        return Resources.Load<GameObject>("Planes/" + _Name.ToString());
-    }
+    public GameObject LoadPrefab() => LoadPrefab(Parameters.Name);
 
-    public WeaponStation GetWeaponStationByNumber(int _StationNumber)
+    public GameObject InstantiateGameObject() => MonoBehaviour.Instantiate(LoadPrefab());
+
+    public static AirplaneParameters LoadParameters(string _PlaneName)
     {
-        foreach(WeaponStation _WeaponStation in WeaponStations)
+        string Data;
+        if (_AirplanesData.ContainsKey(_PlaneName))
+            Data = _AirplanesData[_PlaneName];
+        else
+            Data = File.ReadAllText(AbsolutePath.PlanesSettings + $"{_PlaneName}.json");
+
+        AirplaneParameters Parameters = JsonConvert.DeserializeObject<AirplaneParameters>(Data, new JsonSerializerSettings()
         {
-            if (_WeaponStation.Number == _StationNumber)
-                return _WeaponStation;
-        }
-        return null;
+            ContractResolver = new PrivateResolver(),
+            ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor
+        });
+
+        return Parameters;
     }
 
-    public AirplaneArmament GetArmamentByWeaponStationNumber(int _StationNumber)
+    public void InstantiateEquipments()
     {
-        foreach (AirplaneArmament _Armament in Armament)
+        foreach (WeaponStation Station in Parameters.WeaponStations)
+            Station.InstantiateEquipment();
+    }
+
+    public WeaponStation GetWeaponStationByNumber(int Number) => Parameters.WeaponStations[Number - 1];
+
+    public void CopyParameters(AirplaneParameters _Parameters)
+    {
+        foreach (WeaponStation Station in _Parameters.WeaponStations)
+            Station.ParentAirplane = this;
+
+        Parameters = _Parameters;
+    }
+
+    public class PrivateResolver : DefaultContractResolver
+    {
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
-            if (_Armament.WeaponStationNumber == _StationNumber)
-                return _Armament;
+            var prop = base.CreateProperty(member, memberSerialization);
+            if (!prop.Writable)
+            {
+                var property = member as PropertyInfo;
+                var hasPrivateSetter = property?.GetSetMethod(true) != null;
+                prop.Writable = hasPrivateSetter;
+            }
+            return prop;
         }
-        return null;
-    }
-
-    public static Airplane GetPlaneByName(PlaneName _PlaneName)
-    {
-        return LoadGameObject(_PlaneName).GetComponent<Airplane>();
     }
 }

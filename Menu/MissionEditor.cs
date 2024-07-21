@@ -4,86 +4,94 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System;
+using System.Linq;
+using Unity.VisualScripting;
+using Newtonsoft.Json;
+using System.IO;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
 public class MissionEditor : MonoBehaviour
 {
-    [SerializeField] public TMP_Dropdown PlanesDropdown;
-    [SerializeField] public TMP_Dropdown ArmSuspensionDropdown;
-    [SerializeField] public UnityEngine.UI.Image PlaneImage;
-    [SerializeField] public GameObject Menu;
-    [SerializeField] public GameObject MissionEditorMainMenu;
-    [SerializeField] public GameObject PlaneConfigurationMenu;
-    [SerializeField] public GameObject FuelLoadMenu;
-    [SerializeField] public TMP_Text SuspensionLabel;
-    [SerializeField] public UnityEngine.UI.Image MapImage;
-    [SerializeField] public Scrollbar TotalFuelCountScrollbar;
-    [SerializeField] public Scrollbar FuelTankScrollbar;
-    [SerializeField] public TMP_Text FuelCountLabel;
-    [SerializeField] public TMP_Dropdown UnitsDropdown;
-    [SerializeField] public TMP_Text TotalWeightLabel;
-    public Airplane SelectedPlane
+    [SerializeField] private TMP_Dropdown PlanesDropdown;
+    [SerializeField] private TMP_Dropdown ArmSuspensionDropdown;
+    [SerializeField] private UnityEngine.UI.Image PlaneImage;
+    [SerializeField] private GameObject Menu;
+    [SerializeField] private GameObject MissionEditorMainMenu;
+    [SerializeField] private GameObject PlaneConfigurationMenu;
+    [SerializeField] private Button PlaneConfigurationButton;
+    [SerializeField] private GameObject FuelLoadMenu;
+    [SerializeField] private TMP_Text SuspensionLabel;
+    [SerializeField] private UnityEngine.UI.Image MapImage;
+    [SerializeField] private Scrollbar TotalFuelCountScrollbar;
+    [SerializeField] private Scrollbar FuelTankScrollbar;
+    [SerializeField] private TMP_Text FuelCountLabel;
+    [SerializeField] private TMP_Dropdown UnitsDropdown;
+    [SerializeField] private TMP_Text TotalWeightLabel;
+    public AirplaneParameters SelectedPlaneParameters
     {
         get
         {
-            _SelectedPlane.Armament = _SelectedArmament;
-            foreach (var _Armament in _SelectedArmament)
-            {
-                _Armament.ParentAirplane = _SelectedPlane;
-            }
+            _SelectedPlaneParameters.SetEquipments(_SelectedEquipmentNames);
 
             foreach(var _Element in _ScrollbarFuelTanks)
             {
-                for (int i = 0; i < _SelectedPlane.InternalFuelTanks.Count; i++)
+                for (int i = 0; i < _SelectedPlaneParameters.InternalFuelTanks.Count; i++)
                 {
-                    if (_SelectedPlane.InternalFuelTanks[i].Name == _Element.Value.Name)
+                    if (_SelectedPlaneParameters.InternalFuelTanks[i].Name == _Element.Value.Name)
                     {
                         float _FuelMass = _Element.Value.MaxWeight * _Element.Key.value;
                         if (_CurrentUnits == "Lb")
                             _FuelMass *= Constants.LbToKg;
-                        _SelectedPlane.InternalFuelTanks[i].CurrentWeight = _FuelMass;
+                        _SelectedPlaneParameters.InternalFuelTanks[i].CurrentWeight = _FuelMass;
                         break;
                     }
                 }
             }
-            return _SelectedPlane;
+            return _SelectedPlaneParameters;
         }
     }
 
     private static List<TMP_Dropdown> _ArmamentDropdowns = new List<TMP_Dropdown>();
     private List<TMP_Text> _ArmamentLabels = new List<TMP_Text>();
     private List<UnityEngine.Object> _FuelLoadMenuElements = new List<UnityEngine.Object>();
-    private List<AirplaneArmament> _SelectedArmament = new List<AirplaneArmament>();
-    private List<ArmamentName> _SelectedArmamentNames;
-    private Airplane _SelectedPlane;
+    private List<AirplaneEquipment> _SelectedEquipment = new List<AirplaneEquipment>();
+    private List<string> _SelectedEquipmentNames;
+    private AirplaneParameters _SelectedPlaneParameters;
     private string _CurrentUnits { get { return UnitsDropdown.options[UnitsDropdown.value].text; } }
-    private Dictionary<string, PlaneName> _PlanesNames = new Dictionary<string, PlaneName>()
+    private Dictionary<string, string> _PlanesNames = new Dictionary<string, string>()
     {
-        {"F/A 18C", PlaneName.FA18C},
-        {"A10C", PlaneName.A10C}
+        {"F/A 18C", "FA18C"},
+        {"A10C", "A10C"}
     };
     private Dictionary<Scrollbar, FuelTank> _ScrollbarFuelTanks = new Dictionary<Scrollbar, FuelTank>();
     private Dictionary<Scrollbar, TMP_Text> _ScrollbarLabels = new Dictionary<Scrollbar, TMP_Text>();
 
     private void Start()
     {
-        PlaneName _PlaneName = _PlanesNames[PlanesDropdown.options[PlanesDropdown.value].text];
-        _SelectedPlane = Airplane.GetPlaneByName(_PlaneName);
-        CreateAirplaneFuelLoadElements();
+        PlaneConfigurationButton.onClick.AddListener(ChangePlane);
+        PlaneConfigurationButton.onClick.AddListener(() => ChangeTotalAirplaneWeight());
+
+        ChangePlane();
+        CreateAirplaneFuelLoadElements(); 
     }
 
     public void ChangePlane()
     {
-        PlaneName _PlaneName = _PlanesNames[PlanesDropdown.options[PlanesDropdown.value].text];
-        _SelectedPlane = Airplane.GetPlaneByName(_PlaneName);
-        PlaneImage.sprite = Resources.Load<Sprite>("Sprites/Planes/" + _SelectedPlane.Name);
-        CreateArmamentDropdowns(_SelectedPlane.WeaponStations);
+        string _PlaneName = _PlanesNames[PlanesDropdown.options[PlanesDropdown.value].text];
+        _SelectedPlaneParameters = Airplane.LoadParameters(_PlaneName);
+        PlaneImage.sprite = Resources.Load<Sprite>(ResourcesPath.SpritesPlanes + _SelectedPlaneParameters.Name);
+        CreateArmamentDropdowns(_SelectedPlaneParameters.WeaponStations.ToList());
     }
 
     public void StartGame()
     {
-        if (_SelectedArmament != null)
+        if (_SelectedEquipment != null)
         {
-            SceneLoader.Airplane = SelectedPlane;
+            AirportSettings Settings = GetComponent<AirportSettings>();
+            SceneLoader.Parameters = SelectedPlaneParameters;
+            SceneLoader.SelectedAirport = Settings.SelectedAirport;
+            SceneLoader.SelectedRunway = Settings.SelectedRunway;
             SceneManager.LoadScene("LoadingScreen");
         }
     }
@@ -102,14 +110,14 @@ public class MissionEditor : MonoBehaviour
 
     public void SaveSelectedArmament(int e)
     {
-        _SelectedArmamentNames = GetSelectedArmamentNames();
-        _SelectedArmament = GetSelectedArmament();
+        _SelectedEquipmentNames = GetSelectedArmamentNames();
+        _SelectedEquipment = GetSelectedArmament();
     }
 
     public void DeleteSelectedArmament()
     {
-        _SelectedArmamentNames = null;
-        _SelectedArmament = null;
+        _SelectedEquipmentNames = null;
+        _SelectedEquipment = null;
     }    
 
     public void DeleteAirplaneFuelLoadElements()
@@ -135,7 +143,7 @@ public class MissionEditor : MonoBehaviour
             FuelCountLabel.text = ((int)(_CurrentFuelMass * Constants.KgToLb)).ToString();
         else
             FuelCountLabel.text = ((int)_CurrentFuelMass).ToString();
-        ChangeTotalAirplaneWeight(0);
+        ChangeTotalAirplaneWeight();
     }
 
     public void UpdateFuelCount(float e)
@@ -152,25 +160,28 @@ public class MissionEditor : MonoBehaviour
         else
             FuelCountLabel.text = ((int)_CurrentFuelMass).ToString();
         //TotalFuelCountScrollbar.value = _CurrentFuelMass / _MaxFuelMass;
-        ChangeTotalAirplaneWeight(0);
+        ChangeTotalAirplaneWeight();
     }
 
-    public void ChangeTotalAirplaneWeight(int e)
+    public void ChangeTotalAirplaneWeight()
     {
-        float _FuelMass = float.Parse(FuelCountLabel.text);
+        float _FuelMass = float.TryParse(FuelCountLabel.text, out float FuelCount) ? FuelCount : 0;
         float _ArmamentMass = 0;
-        if (_SelectedArmament != null)
+        if (_SelectedEquipment != null)
         {
-            foreach (var _Armament in _SelectedArmament)
+            foreach (var _Armament in _SelectedEquipment)
             {
+                if (_Armament == null)
+                    continue;
+
                 _ArmamentMass += _Armament.Mass;
             }
         }
-        float _TotalWeight = _SelectedPlane.EmptyWeight + _FuelMass + _ArmamentMass;
-        float _MaxWeight = _SelectedPlane.MaxWeight;
+        float _TotalWeight = _SelectedPlaneParameters.EmptyWeight + _FuelMass + _ArmamentMass;
+        float _MaxWeight = _SelectedPlaneParameters.MaxWeight;
         if (_CurrentUnits == "Lb")
         {
-            _TotalWeight = (_SelectedPlane.EmptyWeight * Constants.KgToLb) + _FuelMass + (_ArmamentMass * Constants.KgToLb);
+            _TotalWeight = (_SelectedPlaneParameters.EmptyWeight * Constants.KgToLb) + _FuelMass + (_ArmamentMass * Constants.KgToLb);
             _MaxWeight *= Constants.KgToLb;
         }           
         TotalWeightLabel.text = _TotalWeight.ToString();
@@ -193,25 +204,27 @@ public class MissionEditor : MonoBehaviour
             TMP_Dropdown _Dropdown = Instantiate(ArmSuspensionDropdown, PlaneConfigurationMenu.transform);
             TMP_Text _Label = Instantiate(SuspensionLabel, PlaneConfigurationMenu.transform);
             _Dropdown.ClearOptions();
-            _Dropdown.AddOptions(_WeaponStations[i].EnumToString());
+            List<string> PossibleEquipment = new List<string> { AirplaneEquipment.None };
+            PossibleEquipment.AddRange(_WeaponStations[i].PossibleEquipment);
+            _Dropdown.AddOptions(PossibleEquipment);
             _Dropdown.transform.localPosition = new Vector3(_X, _Y, 0);
             _Label.text = _WeaponStations[i].Number.ToString();
             _Label.transform.localPosition = new Vector3(_X, _Y + 40);
             _ArmamentDropdowns.Add(_Dropdown);
             _ArmamentLabels.Add(_Label);
-            if (_SelectedArmamentNames != null)
+            if (_SelectedEquipmentNames != null)
             {
-                List<string> _PossibleArmament = _WeaponStations[i].EnumToString();
+                IReadOnlyList<string> _PossibleArmament = _WeaponStations[i].PossibleEquipment;
                 for (int j = 0; j < _PossibleArmament.Count; j ++)
                 {
-                    if (_PossibleArmament[j] == _SelectedArmamentNames[i].ToString())
+                    if (_PossibleArmament[j] == _SelectedEquipmentNames[i])
                     {
                         _Dropdown.value = j;
                     }
                 }
             }
             _Dropdown.onValueChanged.AddListener(SaveSelectedArmament);
-            _Dropdown.onValueChanged.AddListener(ChangeTotalAirplaneWeight);
+            _Dropdown.onValueChanged.AddListener((e) => ChangeTotalAirplaneWeight());
             _X -= 150;
         }
     }
@@ -219,7 +232,7 @@ public class MissionEditor : MonoBehaviour
     public void CreateAirplaneFuelLoadElements()
     {
         float _Y = 450;
-        for (int i = 0; i < _SelectedPlane.InternalFuelTanks.Count; i++)
+        for (int i = 0; i < _SelectedPlaneParameters.InternalFuelTanks.Count; i++)
         {
             Scrollbar _Scrollbar = Instantiate(FuelTankScrollbar, FuelLoadMenu.transform);
             TMP_Text _FuelCountLabel = Instantiate(FuelCountLabel, FuelLoadMenu.transform);
@@ -230,11 +243,11 @@ public class MissionEditor : MonoBehaviour
             RectTransform _TankNameRectTransform = (RectTransform)_TankNameLabel.transform;
             RectTransform _FuelCountRectTransform = (RectTransform)_FuelCountLabel.transform;
             RectTransform _ScrollbarRectTransform = (RectTransform)_FuelCountLabel.transform;
-            _TankNameLabel.text = _SelectedPlane.InternalFuelTanks[i].Name;
+            _TankNameLabel.text = _SelectedPlaneParameters.InternalFuelTanks[i].Name;
             _TankNameLabel.transform.localPosition = new Vector3(0, _Y);
             _FuelCountLabel.transform.localPosition = new Vector3(0, _Y - _TankNameRectTransform.rect.height - 5);
             _Scrollbar.transform.localPosition = new Vector3(0, _FuelCountLabel.transform.localPosition.y - _FuelCountRectTransform.rect.height - 10);
-            _ScrollbarFuelTanks[_Scrollbar] = _SelectedPlane.InternalFuelTanks[i];
+            _ScrollbarFuelTanks[_Scrollbar] = _SelectedPlaneParameters.InternalFuelTanks[i];
             _ScrollbarLabels[_Scrollbar] = _FuelCountLabel;
             _FuelLoadMenuElements.Add(_Scrollbar);
             _FuelLoadMenuElements.Add(_FuelCountLabel);
@@ -261,28 +274,30 @@ public class MissionEditor : MonoBehaviour
         }
     }
 
-    private List<AirplaneArmament> GetSelectedArmament()
+    private List<AirplaneEquipment> GetSelectedArmament()
     {
-        List<AirplaneArmament> _Armaments = new List<AirplaneArmament>();
+        List<AirplaneEquipment> _Equipments = new List<AirplaneEquipment>();
         for (int i = 0; i < _ArmamentDropdowns.Count; i++)
         {
             string _CurrentArmamentName = _ArmamentDropdowns[i].options[_ArmamentDropdowns[i].value].text;
-            if (_CurrentArmamentName != ArmamentName.None.ToString() & _CurrentArmamentName != ArmamentName.Pylon.ToString())
+
+            if (_CurrentArmamentName == AirplaneEquipment.None)
             {
-                AirplaneArmament _CurrentArmament = AirplaneArmament.GetArmamentByName(AirplaneArmament.NameStringToEnum(_CurrentArmamentName));
-                _CurrentArmament.WeaponStationNumber = i + 1;
-                _Armaments.Add(_CurrentArmament);
+                _Equipments.Add(null);
+                continue;
             }
+
+            _Equipments.Add(AirplaneEquipment.Load(_CurrentArmamentName));
         }
-        return _Armaments;
+        return _Equipments;
     }
 
-    private List<ArmamentName> GetSelectedArmamentNames()
+    private List<string> GetSelectedArmamentNames()
     {
-        List<ArmamentName> _SelectedArmamentNames = new List<ArmamentName>();
+        List<string> _SelectedArmamentNames = new List<string>();
         for (int i = 0; i < _ArmamentDropdowns.Count; i++)
         {
-            ArmamentName _CurrentArmament = WeaponStation.StringToEnum(_ArmamentDropdowns[i].options[_ArmamentDropdowns[i].value].text); 
+            string _CurrentArmament = _ArmamentDropdowns[i].options[_ArmamentDropdowns[i].value].text; 
             _SelectedArmamentNames.Add(_CurrentArmament);
         }
         return _SelectedArmamentNames;

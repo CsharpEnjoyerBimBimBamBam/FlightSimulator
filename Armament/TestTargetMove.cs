@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TestTargetMove : MonoBehaviour, IPausable
+public class TestTargetMove : MonoBehaviour
 {
     private float _Speed = 200;
     private Rigidbody _TargetRigidbody;
@@ -14,13 +14,13 @@ public class TestTargetMove : MonoBehaviour, IPausable
         _TargetRigidbody = transform.GetComponent<Rigidbody>();
         _TargetRigidbody.velocity = new Vector3(_Speed, 0, 0);
         _LineRenderer = GetComponent<LineRenderer>();
-        IPausable.OnGamePaused.AddListener(Pause);
-        IPausable.OnGameUnpaused.AddListener(Unpause);
+        PauseSwithcer.OnGamePaused += Pause;
+        PauseSwithcer.OnGameUnpaused += Unpause;
     }
 
     private void Update()
     {
-        if (IPausable.IsGamePaused)
+        if (PauseSwithcer.IsGamePaused)
             return;
 
         Vector3 _VelocityInWorldSpace = transform.TransformPoint(_TargetRigidbody.velocity);

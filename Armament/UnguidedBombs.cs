@@ -6,8 +6,7 @@ public class Mk82 : AirplaneArmament
 {
     public Mk82()
     {
-        Name = ArmamentName.Mk82;
-        Type = ArmamentType.UnguidedBomb;
+        EquipmentType = EquipmentType.UnguidedBomb;
         Mass = 227;
         Diameter = 0.273f;
         TorqueCoefficient = 0.08f;

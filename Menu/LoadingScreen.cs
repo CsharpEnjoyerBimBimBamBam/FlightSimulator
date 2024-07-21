@@ -10,18 +10,15 @@ using UnityEngine.UI;
 
 public class LoadingScreen : MonoBehaviour
 {
-    [SerializeField] public Scrollbar ProgressBar;
-    [SerializeField] public TMP_Text LoadingPercent;
-    [SerializeField] public GameObject Loadingscreen;
+    [SerializeField] private Scrollbar ProgressBar;
+    [SerializeField] private TMP_Text LoadingPercent;
+    [SerializeField] private GameObject Loadingscreen;
 
-    private void Start()
-    {
-        StartCoroutine(LoadScene());
-    }
+    private void Start() => StartCoroutine(LoadScene());
 
     private IEnumerator LoadScene()
     {
-        AsyncOperation _Operation = SceneManager.LoadSceneAsync("Default");
+        AsyncOperation _Operation = SceneManager.LoadSceneAsync("Earth");
         while (!_Operation.isDone) 
         {
             ProgressBar.value = _Operation.progress / 0.9f;

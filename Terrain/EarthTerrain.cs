@@ -2,6 +2,7 @@ using JetBrains.Annotations;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -13,30 +14,30 @@ using UnityEngine;
 
 public class EarthTerrain
 {
-    public EarthTerrain(Coordinates _SouthWestCornerCoordinates)
+    public EarthTerrain(GeoPosition _SouthWestCornerCoordinates)
     {
         SouthWestCorner = _SouthWestCornerCoordinates;
         SetCoordinates(SouthWestCorner);
         _BaseAssetName = $"{SouthWestCorner.Latitude.DecimalDegrees};" +
                 $"{SouthWestCorner.Longitude.DecimalDegrees};";
-        HeigthInMeters = Coordinates.AngularDegreesToMeters(SizeInDegrees);
+        HeigthInMeters = GeoPosition.AngularDegreesToMeters(SizeInDegrees);
     }
 
     public EarthTerrain(float _SouthWestCornerLatitude, float _SouthWestCornerLongitude)
     {
-        SouthWestCorner = new Coordinates(_SouthWestCornerLatitude, _SouthWestCornerLongitude);
+        SouthWestCorner = new GeoPosition(_SouthWestCornerLatitude, _SouthWestCornerLongitude);
         SetCoordinates(SouthWestCorner);
         _BaseAssetName = $"{SouthWestCorner.Latitude.DecimalDegrees};" +
                 $"{SouthWestCorner.Longitude.DecimalDegrees};";
-        HeigthInMeters = Coordinates.AngularDegreesToMeters(SizeInDegrees);
+        HeigthInMeters = GeoPosition.AngularDegreesToMeters(SizeInDegrees);
     }
 
     public static string BaseAssetsPath = "Assets/Resources/Terrains";
     public static float SizeInDegrees = 0.2f;
-    public static Dictionary<Coordinates, EarthTerrain> TerrainsBySouthWestCorner = new Dictionary<Coordinates, EarthTerrain>();
-    public Coordinates SouthWestCorner { get; private set; }
-    public Coordinates NorthEastCorner { get; private set; }
-    public Coordinates Center { get; private set; }
+    public static Dictionary<GeoPosition, EarthTerrain> TerrainsBySouthWestCorner = new Dictionary<GeoPosition, EarthTerrain>();
+    public GeoPosition SouthWestCorner { get; private set; }
+    public GeoPosition NorthEastCorner { get; private set; }
+    public GeoPosition Center { get; private set; }
     public float SouthWidthInMeters { get; private set; } 
     public float NorthWidthInMeters { get; private set; }
     public float MaxWidth { get; private set; }
@@ -222,7 +223,7 @@ public class EarthTerrain
             for (int j = 0; j < _ColumnCount; j++)
             {
                 float _VertexLongitude = (SouthWestCorner + (SizeInDegrees * (j / ((float)_ColumnCount - 1)))).Longitude.DecimalDegrees;
-                Vector3 _VertexEarthLocalPositon = new Coordinates(_RowLatitude, _VertexLongitude).ToEarthLocalPosition(_HeightMap[i][j]);
+                Vector3 _VertexEarthLocalPositon = new GeoPosition(_RowLatitude, _VertexLongitude).ToEarthLocalPosition(_HeightMap[i][j]);
                 Vector3 _VertexTerrainLocalPosition = FromEarthToTerrainLocalPosition(_VertexEarthLocalPositon);
                 _Vertices[(_ColumnCount * i) + j] = _VertexTerrainLocalPosition;
                 _UV[(_ColumnCount * i) + j] = CalcualteVertexUV(_VertexTerrainLocalPosition);
@@ -305,22 +306,22 @@ public class EarthTerrain
         _MeshData.Apply(Mesh);
     }
 
-    public static async void AddCollider(EarthTerrain[] _Terrains, int _ThreadCount)
+    public static async Task AddCollider(EarthTerrain[] _Terrains, int _ThreadCount)
     {
-        Mesh[] _Meshes = new Mesh[_Terrains.Length];
-        for (int i = 0; i < _Terrains.Length; i++)
-        {
-            _Meshes[i] = _Terrains[i].Mesh;
-        }
-        JobHandle _MeshBakeJobHandle = new MeshBakeJob(_Meshes).Schedule(_Terrains.Length, _ThreadCount);
+        Mesh[] _Meshes = _Terrains.Select(X => X.Mesh).ToArray();
+        MeshBakeJob _MeshBakeJob = new MeshBakeJob(_Meshes);
+        JobHandle _MeshBakeJobHandle = _MeshBakeJob.Schedule(_Terrains.Length, _ThreadCount);
+        
         while (!_MeshBakeJobHandle.IsCompleted)
         {
             await Task.Delay(1);
         }
-        foreach (Mesh _Mesh in _Meshes)
+        _MeshBakeJobHandle.Complete();
+        _MeshBakeJob.Dispose();
+        foreach (EarthTerrain _Mesh in _Terrains)
         {
-            _Mesh.AddComponent<MeshCollider>();
-        }    
+            _Mesh.GameObject.AddComponent<MeshCollider>();
+        }
     }
 
     public Vector3 FromEarthToTerrainLocalPosition(Vector3 _Position)
@@ -358,50 +359,9 @@ public class EarthTerrain
         return MeshData.Vertices[_Index];
     }
 
-    public Vector3 FindNearestVertexInHeightMap(Coordinates _Coordinates)
+    public Vector3 FindNearestVertexInHeightMap(GeoPosition _Coordinates)
     {
         return new Vector3();
-    }
-
-    private async Task WaitForNormalsRecalculated()
-    {
-        while (!WestSide.IsNormalsRecalculated && !EastSide.IsNormalsRecalculated) //!NorthSide.IsNormalsRecalculated && !SouthSide.IsNormalsRecalculated
-        {
-            await Task.Delay(1);
-        }
-    }
-
-    private Vector3 CalculateNormal(Vector3[] _Vertices, int _Index, int _RowCount, int _ColumnCount)
-    {
-        int _VerticesCount = _RowCount * _ColumnCount;
-        Vector3 _UpVertexLocalPosition = Vector3.zero;
-        Vector3 _DownVertexLocalPosition = Vector3.zero;
-        Vector3 _LeftVertexLocalPosition = Vector3.zero;
-        Vector3 _RightVertexLocalPosition = Vector3.zero;
-        Vector3 _UpRightVertexLocalPosition = Vector3.zero;
-        Vector3 _DownLeftVertexLocalPosition = Vector3.zero;
-        Vector3 _VertexPosition = _Vertices[_Index];
-        if (_Index > _ColumnCount)
-        {
-            _UpVertexLocalPosition = _Vertices[_Index - _ColumnCount] - _VertexPosition;
-            if (_Index + 1 % _ColumnCount != 0 && _Index - _ColumnCount + 1 < _Vertices.Length)
-            {
-                _UpRightVertexLocalPosition = _Vertices[_Index - _ColumnCount + 1] - _VertexPosition;
-                _RightVertexLocalPosition = _Vertices[_Index + 1] - _VertexPosition;
-            }
-        }
-        if (_Index < _VerticesCount - _ColumnCount && _Index + _ColumnCount < _Vertices.Length)
-        {
-            _DownVertexLocalPosition = _Vertices[_Index + _ColumnCount] - _VertexPosition;
-            if (_Index % _ColumnCount != 0 && _Index + _ColumnCount - 1 < _Vertices.Length)
-            {
-                _DownLeftVertexLocalPosition = _Vertices[_Index + _ColumnCount - 1] - _VertexPosition;
-                _LeftVertexLocalPosition = _Vertices[_Index - 1] - _VertexPosition;
-            }
-        }
-        return Vector3.Cross(_UpVertexLocalPosition, _UpRightVertexLocalPosition).normalized +
-            Vector3.Cross(_RightVertexLocalPosition, _DownVertexLocalPosition).normalized +
-            Vector3.Cross(_LeftVertexLocalPosition, _DownLeftVertexLocalPosition).normalized;
     }
 
     private void ConnectToNeighbours(MeshData _MeshData)
@@ -410,7 +370,6 @@ public class EarthTerrain
         Vector3[] _TerrainMeshNormals = _MeshData.Normals;
         if (WestNeighbour != null)
         {
-            Debug.Log("West");
             MeshData _WestTerrainMeshData = WestNeighbour.MeshData;
             for (int i = 0; i < WestSide.Vertices.Length; i++)
             {
@@ -429,7 +388,6 @@ public class EarthTerrain
         }
         if (EastNeighbour != null)
         {
-            Debug.Log("East");
             MeshData _EastTerrainMeshData = EastNeighbour.MeshData;
             for (int i = 0; i < EastSide.Vertices.Length; i++)
             {
@@ -448,7 +406,6 @@ public class EarthTerrain
         }
         if (NorthNeighbour != null)
         {
-            Debug.Log("North");
             MeshData _NorthTerrainMeshData = NorthNeighbour.MeshData;
             for (int i = 0; i < NorthSide.Vertices.Length; i++)
             {
@@ -462,7 +419,6 @@ public class EarthTerrain
         }
         if (SouthNeighbour != null)
         {
-            Debug.Log("South");
             MeshData _SouthTerrainMeshData = SouthNeighbour.MeshData;
             for (int i = 0; i < SouthSide.Vertices.Length; i++)
             {
@@ -487,21 +443,21 @@ public class EarthTerrain
         GameObject.transform.rotation = Quaternion.LookRotation(_TargetForwardDirection, _TargetUpDirection);
     }  
 
-    private void SetCoordinates(Coordinates _SouthWestCornerCoordinates)
+    private void SetCoordinates(GeoPosition _SouthWestCornerCoordinates)
     {
         NorthEastCorner = _SouthWestCornerCoordinates + SizeInDegrees;
         Center = _SouthWestCornerCoordinates + (SizeInDegrees / 2);
-        SouthWidthInMeters = Coordinates.AngularDegreesToMeters(SizeInDegrees, _SouthWestCornerCoordinates.Latitude.DecimalDegrees);
-        NorthWidthInMeters = Coordinates.AngularDegreesToMeters(SizeInDegrees, NorthEastCorner.Latitude.DecimalDegrees);
+        SouthWidthInMeters = GeoPosition.AngularDegreesToMeters(SizeInDegrees, _SouthWestCornerCoordinates.Latitude.DecimalDegrees);
+        NorthWidthInMeters = GeoPosition.AngularDegreesToMeters(SizeInDegrees, NorthEastCorner.Latitude.DecimalDegrees);
         MaxWidth = Mathf.Max(SouthWidthInMeters, NorthWidthInMeters);
     }
 
     private void SetAsNeighbour()
     {
-        Coordinates _WestTerrainCoordinates = SouthWestCorner - new Coordinates(0, SizeInDegrees);
-        Coordinates _EastTerrainCoordinates = SouthWestCorner + new Coordinates(0, SizeInDegrees);
-        Coordinates _NorthTerrainCoordinates = SouthWestCorner + new Coordinates(SizeInDegrees, 0);
-        Coordinates _SouthTerrainCoordinates = SouthWestCorner - new Coordinates(SizeInDegrees, 0);
+        GeoPosition _WestTerrainCoordinates = SouthWestCorner - new GeoPosition(0, SizeInDegrees);
+        GeoPosition _EastTerrainCoordinates = SouthWestCorner + new GeoPosition(0, SizeInDegrees);
+        GeoPosition _NorthTerrainCoordinates = SouthWestCorner + new GeoPosition(SizeInDegrees, 0);
+        GeoPosition _SouthTerrainCoordinates = SouthWestCorner - new GeoPosition(SizeInDegrees, 0);
         if (TerrainsBySouthWestCorner.ContainsKey(_WestTerrainCoordinates))
         {
             TerrainsBySouthWestCorner[_WestTerrainCoordinates].EastNeighbour = this;
@@ -522,10 +478,10 @@ public class EarthTerrain
 
     private void SetNeighbours()
     {
-        Coordinates _WestTerrainCoordinates = SouthWestCorner - new Coordinates(0, SizeInDegrees);
-        Coordinates _EastTerrainCoordinates = SouthWestCorner + new Coordinates(0, SizeInDegrees);
-        Coordinates _NorthTerrainCoordinates = SouthWestCorner + new Coordinates(SizeInDegrees, 0);
-        Coordinates _SouthTerrainCoordinates = SouthWestCorner - new Coordinates(SizeInDegrees, 0);
+        GeoPosition _WestTerrainCoordinates = SouthWestCorner - new GeoPosition(0, SizeInDegrees);
+        GeoPosition _EastTerrainCoordinates = SouthWestCorner + new GeoPosition(0, SizeInDegrees);
+        GeoPosition _NorthTerrainCoordinates = SouthWestCorner + new GeoPosition(SizeInDegrees, 0);
+        GeoPosition _SouthTerrainCoordinates = SouthWestCorner - new GeoPosition(SizeInDegrees, 0);
         if (TerrainsBySouthWestCorner.ContainsKey(_WestTerrainCoordinates) && TerrainsBySouthWestCorner[_WestTerrainCoordinates].MeshData != null)
         {
             WestNeighbour = TerrainsBySouthWestCorner[_WestTerrainCoordinates];
@@ -550,7 +506,7 @@ public class EarthTerrain
         public bool IsNormalsRecalculated = false;
     }
 
-    private struct MeshBakeJob : IJobParallelFor
+    private struct MeshBakeJob : IJobParallelFor, IDisposable
     {
         public MeshBakeJob(Mesh[] _Meshes)
         {
@@ -568,9 +524,8 @@ public class EarthTerrain
             }
         }
 
-        public void Execute(int _Index)
-        {
-            Physics.BakeMesh(_MeshesIDs[_Index], false);
-        }
+        public void Execute(int _Index) => Physics.BakeMesh(_MeshesIDs[_Index], false);
+
+        public void Dispose() => _MeshesIDs.Dispose();
     }
 }

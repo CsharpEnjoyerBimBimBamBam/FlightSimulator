@@ -9,8 +9,8 @@ public class BingMapsMetaData
     public AuthenticationResultCode authenticationResultCode;
     public List<ResourceSets> resourceSets;
     public List<float> Bbox { get { return resourceSets[0].resources[0].bbox; } }
-    public Coordinates SouthWestCorner { get { return new Coordinates(Bbox[0], Bbox[1]); } }
-    public Coordinates NorthEastCorner { get { return new Coordinates(Bbox[2], Bbox[3]); } }
+    public GeoPosition SouthWestCorner { get { return new GeoPosition(Bbox[0], Bbox[1]); } }
+    public GeoPosition NorthEastCorner { get { return new GeoPosition(Bbox[2], Bbox[3]); } }
     public StatusDescription statusDescription;
 
     [Serializable]

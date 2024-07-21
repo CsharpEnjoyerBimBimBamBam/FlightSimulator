@@ -6,21 +6,24 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Drawing;
 using System.Collections.Generic;
+using System.Net;
 
 public class BingMapsClient : WebServiceClient
 {
-    public BingMapsClient(string _ApiKey)
+    public BingMapsClient(List<string> _ApiKeys)  : base(_ApiKeys)
     {
-        ApiKey = _ApiKey;
-        _BaseUri = "https://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial/";
-        _UriBuilder = new UriBuilder(_BaseUri);
-        _HttpClient = new HttpClient();
+        
+    }
+
+    public BingMapsClient(List<string> _ApiKeys, List<WebProxy> _Proxys) : base(_ApiKeys, _Proxys)
+    {
+        
     }
 
     public int PhotoWidth = 2000;
     public int PhotoHeight = 1500;
 
-    public async Task<Texture2D> GetTerrainTexture(Coordinates _SouthWestCorner, Coordinates _NorthEastCorner)
+    public async Task<Texture2D> GetTerrainTexture(GeoPosition _SouthWestCorner, GeoPosition _NorthEastCorner)
     {
         Stopwatch _ApplyTimer = new Stopwatch();
         Stopwatch _PixelsGenerateTimer = new Stopwatch();
@@ -30,26 +33,26 @@ public class BingMapsClient : WebServiceClient
         float _SouthWestCornerLatNormalized = _SouthWestCorner.Latitude.DecimalDegrees + 90;
         float _NorthEastCornerLatNormalized = _NorthEastCorner.Latitude.DecimalDegrees + 90;
         float _ReferenceTerrainHeight = _NorthEastCornerLatNormalized - _SouthWestCornerLatNormalized;
-        Coordinates _ExtendedSouthWestCorner = _SouthWestCorner - new Coordinates(_ReferenceTerrainHeight * 0.02f, 0);
-        _UriBuilder.Query = $"key={ApiKey}&mapSize={PhotoWidth},{PhotoHeight}&" +
+        GeoPosition _ExtendedSouthWestCorner = _SouthWestCorner - new GeoPosition(_ReferenceTerrainHeight * 0.02f, 0);
+        _UriBuilder.Query = $"key={ApiKeys[CurrentApiKeyIndex]}&mapSize={PhotoWidth},{PhotoHeight}&" +
             $"mapArea={_SouthWestCorner.Latitude.DecimalDegrees}," +
             $"{_SouthWestCorner.Longitude.DecimalDegrees}," +
             $"{_NorthEastCorner.Latitude.DecimalDegrees}," +
             $"{_NorthEastCorner.Longitude.DecimalDegrees}";
-        Task<HttpResponseMessage> _TerrainPhotoResponseTask = _HttpClient.GetAsync(_UriBuilder.ToString());
+        Task<HttpResponseMessage> _TerrainPhotoResponseTask = GetResponse();
         _UriBuilder.Query += "&mapMetadata=1";
-        Task<HttpResponseMessage> _TerrainMetaDataTask = _HttpClient.GetAsync(_UriBuilder.ToString());
+        Task<HttpResponseMessage> _TerrainMetaDataTask = GetResponse();
         await _TerrainPhotoResponseTask;
-        byte[] _TerrainPhotoData = await _TerrainPhotoResponseTask.Result.Content.ReadAsByteArrayAsync();
+        byte[] _TerrainPhotoData = await Task.Run(async() => await _TerrainPhotoResponseTask.Result.Content.ReadAsByteArrayAsync());
         Texture2D _TerrainTexture = new Texture2D(PhotoWidth, PhotoHeight);
         _TerrainTexture.LoadImage(_TerrainPhotoData);
         await _TerrainMetaDataTask;
         BingMapsMetaData _MetaData = JsonUtility.FromJson<BingMapsMetaData>(await _TerrainMetaDataTask.Result.Content.ReadAsStringAsync());
         if (!_TerrainMetaDataTask.Result.IsSuccessStatusCode)
         {
-            _MetaData = CreateDefaultMeatData(_ExtendedSouthWestCorner, _NorthEastCorner);
+            _MetaData = CreateDefaultMetaData(_ExtendedSouthWestCorner, _NorthEastCorner);
         }
-
+        
         Rectangle _Area = CalculateImageArea(_SouthWestCorner, _NorthEastCorner, _MetaData);
         _PixelsGenerateTimer.Start();
         UnityEngine.Color[] _AreaPixels = _TerrainTexture.GetPixels(_Area.X, _Area.Y, _Area.Width, _Area.Height);
@@ -70,7 +73,13 @@ public class BingMapsClient : WebServiceClient
         return _CroppedTerrainTexture;
     }
 
-    private Rectangle CalculateImageArea(Coordinates _ReferenceSouthWestCorner, Coordinates _ReferenceNorthEastCorner, BingMapsMetaData _ImageMetaData)
+    protected override void Initialize()
+    {
+        _BaseUri = "https://dev.virtualearth.net/REST/v1/Imagery/Map/Aerial/";
+        _UriBuilder = new UriBuilder(_BaseUri);
+    }
+
+    private Rectangle CalculateImageArea(GeoPosition _ReferenceSouthWestCorner, GeoPosition _ReferenceNorthEastCorner, BingMapsMetaData _ImageMetaData)
     {
         float _SouthWestCornerLatNormalized = _ReferenceSouthWestCorner.Latitude.DecimalDegrees + 90;
         float _SouthWestCornerLngNormalized = _ReferenceSouthWestCorner.Longitude.DecimalDegrees + 180;
@@ -98,23 +107,23 @@ public class BingMapsClient : WebServiceClient
         return _Area;
     }
 
-    private BingMapsMetaData CreateDefaultMeatData(Coordinates _SouthWestCorner, Coordinates _NorthEastCorner)
+    private BingMapsMetaData CreateDefaultMetaData(GeoPosition _SouthWestCorner, GeoPosition _NorthEastCorner)
     {
         BingMapsMetaData _MetaData = new BingMapsMetaData();
         _MetaData.resourceSets = new List<BingMapsMetaData.ResourceSets>
         {
-                new BingMapsMetaData.ResourceSets()
+            new BingMapsMetaData.ResourceSets()
         };
         _MetaData.resourceSets[0].resources = new List<BingMapsMetaData.Resources>
         {
-                new BingMapsMetaData.Resources()
+            new BingMapsMetaData.Resources()
         };
         _MetaData.resourceSets[0].resources[0].bbox = new List<float>
         {
-                _SouthWestCorner.Latitude.DecimalDegrees,
-                _SouthWestCorner.Longitude.DecimalDegrees,
-                _NorthEastCorner.Latitude.DecimalDegrees,
-                _NorthEastCorner.Longitude.DecimalDegrees,
+            _SouthWestCorner.Latitude.DecimalDegrees,
+            _SouthWestCorner.Longitude.DecimalDegrees,
+            _NorthEastCorner.Latitude.DecimalDegrees,
+            _NorthEastCorner.Longitude.DecimalDegrees,
         };
         return _MetaData;
     }

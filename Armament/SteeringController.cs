@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using UnityEngine;
 
 public class SteeringController
 {
-    public SteeringController(List<GameObject> Rudders, Transform SteeringObject)
+    public SteeringController(IEnumerable<GameObject> Rudders, Transform SteeringObject)
     {
-        _Rudders = Rudders;
+        _Rudders = Rudders.ToList();
         _SteeringObject = SteeringObject;
         MaxDeflectionAngle = 25;
         foreach (GameObject _Rudder in _Rudders)
