@@ -1,8 +1,12 @@
 using UnityEngine;
 using System;
 using UnityEngine.Scripting;
+using System.Data;
+using System.Runtime.InteropServices;
+using Unity.Burst.Intrinsics;
+using static UnityEngine.Rendering.VirtualTexturing.Debugging;
 
-public class MeshData : IDisposable
+public class MeshData
 {
     public MeshData(int _VerticesCount, int _TrianglesCount)
     {
@@ -33,17 +37,14 @@ public class MeshData : IDisposable
     public float CompressionRatio;
     public MeshData CompressedMeshData;
 
-    public static MeshData FromMesh(Mesh _Mesh)
+    public static MeshData FromMesh(Mesh _Mesh) => new MeshData
     {
-        return new MeshData
-        {
-            Vertices = _Mesh.vertices,
-            UV = _Mesh.uv,
-            Normals = _Mesh.normals,
-            Triangles = _Mesh.triangles,
-            Bounds = _Mesh.bounds,
-        };
-    }
+        Vertices = _Mesh.vertices,
+        UV = _Mesh.uv,
+        Normals = _Mesh.normals,
+        Triangles = _Mesh.triangles,
+        Bounds = _Mesh.bounds,
+    };
 
     public void Connect(MeshData _OtherMeshData, bool _InitializeNewArrays=true)
     {
@@ -68,13 +69,31 @@ public class MeshData : IDisposable
             Mathf.Max(Bounds.size.z, _OtherMeshData.Bounds.size.z)));
     }
 
-    public void Apply(Mesh _Mesh)
+    public unsafe void Apply(Mesh _Mesh)
     {
-        _Mesh.vertices = Vertices;  
-        _Mesh.normals = Normals;
-        _Mesh.triangles = Triangles;
-        _Mesh.uv = UV;
-        _Mesh.bounds = Bounds;
+        fixed (Vector3* VerticesPtr = Vertices, NormalsPtr = Normals)
+        {
+            _Mesh.vertices = Vertices;
+            _Mesh.normals = Normals;
+            _Mesh.triangles = Triangles;
+            _Mesh.uv = UV;
+            _Mesh.bounds = Bounds;
+        }
+
+        fixed (int* TrianglesPtr = Triangles)
+        {
+            _Mesh.triangles = Triangles;
+        }
+
+        fixed (Vector2* UVPtr = UV)
+        {
+            _Mesh.uv = UV;
+        }
+
+        fixed (Bounds* BoundsPtr = &Bounds)
+        {
+            _Mesh.bounds = Bounds;
+        }
     }
 
     public void ApplyAsSubMesh(Mesh _Mesh, int _SubMeshIndex, int _UVChannel)
@@ -86,14 +105,10 @@ public class MeshData : IDisposable
         _Mesh.bounds = Bounds;
     }
 
-    public void Dispose()
+    private unsafe T[] ConnectArraysByCreatingNewArray<T>(T[] _FirstArray, T[] _SecondArray)
     {
-        GC.SuppressFinalize(this);
-    }
+        T[] _ConnectedArrays = new T[_FirstArray.Length + _SecondArray.Length];     
 
-    private T[] ConnectArraysByCreatingNewArray<T>(T[] _FirstArray, T[] _SecondArray)
-    {
-        T[] _ConnectedArrays = new T[_FirstArray.Length + _SecondArray.Length];
         int _Index = 0;
         for (int i = 0; i < _FirstArray.Length; i++)
         {
@@ -106,14 +121,19 @@ public class MeshData : IDisposable
             _ConnectedArrays[_Index] = _SecondArray[i];
             _Index++;
         }
+
+        GCHandle.Alloc(_FirstArray).Free();
+        GCHandle.Alloc(_SecondArray).Free();
         return _ConnectedArrays;
     }
 
-    private void ConnectArrays<T>(ref T[] _FirstArray, T[] _SecondArray, int _StartIndex)
+    private unsafe void ConnectArrays<T>(ref T[] _FirstArray, T[] _SecondArray, int _StartIndex)
     {
         for (int i = 0; i < _SecondArray.Length; i++)
         {
             _FirstArray[_StartIndex + i] = _SecondArray[i];
         }
+        GCHandle.Alloc(_FirstArray).Free();
+        GCHandle.Alloc(_SecondArray).Free();
     }
 }

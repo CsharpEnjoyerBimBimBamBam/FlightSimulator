@@ -3,7 +3,7 @@ using System.Linq;
 using Unity.Collections;
 using UnityEngine;
 
-public class Polygon 
+public class Polygon
 {
     public Polygon(Vector2[] _Vertices)
     {
@@ -26,14 +26,13 @@ public class Polygon
     public bool CheckIfPointInsidePolygon(Vector2 _Point)
     {
         Vector2 _GuideVector = Vector2.right;
-        Vector2 _Ray = _GuideVector - _Point;
         Line _RayLine = new LineSegment(_Point, _Point + _GuideVector).ToLine();
         int _IntersectionsCount = 0;
         for (int i = 0; i < Edges.Count; i++)
         {
-            if (Edges[i].CheckForIntersectionWithLine(_RayLine, out _))
+            if (Edges[i].CheckForIntersectionWithLine(_RayLine, out Vector2 _IntersectionPoint))
             {
-                if (Vector2.Angle(_Ray, Edges[i].FirstPoint - _Point) < 90 && Vector2.Angle(_Ray, Edges[i].SecondPoint - _Point) < 90)
+                if (Vector2.Angle(_GuideVector, _IntersectionPoint - _Point) == 0)
                 {
                     _IntersectionsCount++;
                 }

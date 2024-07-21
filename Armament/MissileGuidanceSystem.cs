@@ -10,8 +10,7 @@ using UnityEngine.UIElements;
 public class MissileGuidanceSystem : MonoBehaviour
 {
     public bool IsLaunched = false;
-    public GameObject Target;
-    public Rigidbody TargetRigidbody;
+    public Rigidbody Target;
     public float EstimatedPreemption;
     public float RealPreemtion;
     public float EstimatedArrivalTime;
@@ -26,7 +25,7 @@ public class MissileGuidanceSystem : MonoBehaviour
 
     private void Start()
     {
-        MissileRigidbody = Missile.rigidBody;
+        MissileRigidbody = Missile.EquipmentRigidbody;
         _SteeringController = new SteeringController(Missile.Rudders, transform);
         _SteeringController.SteerPower = 5;
         _SteeringController.DeadZone = Missile.DeadZone;
@@ -35,16 +34,16 @@ public class MissileGuidanceSystem : MonoBehaviour
 
     private void Update()
     {
-        if (IPausable.IsGamePaused)
+        if (PauseSwithcer.IsGamePaused)
             return;
 
-        float _TargetSpeed = TargetRigidbody.velocity.magnitude;
+        float _TargetSpeed = Target.velocity.magnitude;
         float _DistanceToTarget = (Target.transform.position - transform.position).magnitude;
         float _MissileArrivalTime = GetMissileArrivalTime(0.1f);
         float _Preemtion = _MissileArrivalTime * _TargetSpeed;
         EstimatedPreemption = _Preemtion;
         EstimatedArrivalTime = _MissileArrivalTime;
-        Vector3 _TargetVector = (TargetRigidbody.velocity.normalized * _Preemtion) + TargetRigidbody.transform.position; //Target.transform.TransformPoint(TargetRigidbody.velocity.normalized * _Preemtion);
+        Vector3 _TargetVector = (Target.velocity.normalized * _Preemtion) + Target.transform.position; //Target.transform.TransformPoint(TargetRigidbody.velocity.normalized * _Preemtion);
         float _RealPreemtion = Vector3.Distance(Target.transform.position, _TargetVector);
         //_TargetVector = Target.transform.TransformPoint(TargetRigidbody.velocity.normalized * (_Preemtion * _Preemtion / _RealPreemtion));
         RealPreemtion = Vector3.Distance(Target.transform.position, _TargetVector);
@@ -57,7 +56,7 @@ public class MissileGuidanceSystem : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (IPausable.IsGamePaused)
+        if (PauseSwithcer.IsGamePaused)
             return;
 
         _Acceleration = MissileRigidbody.velocity.magnitude - _SpeedTemp / Time.fixedDeltaTime;
@@ -68,11 +67,11 @@ public class MissileGuidanceSystem : MonoBehaviour
     {
         int _Count = 0;
         Vector3 _MissileLocalPosition = Target.transform.InverseTransformPoint(transform.position);
-        float _RelativeSpeed = (MissileRigidbody.velocity - TargetRigidbody.velocity).magnitude;
+        float _RelativeSpeed = (MissileRigidbody.velocity - Target.velocity).magnitude;
         float _MissileSpeed = MissileRigidbody.velocity.magnitude;
-        float _TargetSpeed = TargetRigidbody.velocity.magnitude;
+        float _TargetSpeed = Target.velocity.magnitude;
         float _DistanceToTarget = (Target.transform.position - transform.position).magnitude;
-        float _MissileToTargetAngle = Vector3.Angle(_MissileLocalPosition, TargetRigidbody.velocity);
+        float _MissileToTargetAngle = Vector3.Angle(_MissileLocalPosition, Target.velocity);
         float _MinArrivalTime = _DistanceToTarget / _RelativeSpeed;
         float _MaxArrivalTime = _MinArrivalTime * 10;
         float _MiddleArrivalTime = (_MaxArrivalTime + _MinArrivalTime) / 2;

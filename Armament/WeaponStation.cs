@@ -1,27 +1,64 @@
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[Serializable]
 public class WeaponStation
 {
-    public int Number;
-    public List<ArmamentName> PossibleArmament;
-    public Vector3 LocalPosition;
-    public bool IsNeedPylon;
-
-    public List<string> EnumToString()
+    public int Number { get; private set; }
+    public int Index => Number - 1;
+    public IReadOnlyList<string> PossibleEquipment { get; private set; } = new List<string>();
+    public Vector3 LocalPosition { get; private set; }
+    public bool IsNeedPylon => Pylon != null;
+    public bool IsHaveEquipment => _CurrentEquipment != null;
+    public bool IsEquipmentInstantiated => _CurrentEquipment?.EquipmentGameObject != null;
+    public virtual AirplaneEquipment? CurrentEquipment 
     {
-        List<string> _ArmamentList = new List<string>();
-        foreach(ArmamentName _Armament in PossibleArmament)
+        get => _CurrentEquipment;
+        set
         {
-            _ArmamentList.Add(_Armament.ToString());
-        }
-        return _ArmamentList;
+            if (value == null)
+            {
+                _CurrentEquipment = null;
+                return;
+            }
+
+            value.Station = this;
+
+            if (!IsNeedPylon || value is Pylon)
+            {
+                _CurrentEquipment = value;
+                return;
+            }
+
+            Pylon PylonCopy = Pylon.CopyInstance();
+            if (PylonCopy.WeaponStations.Count == 0)
+                return;
+            PylonCopy.Station = this;
+            PylonCopy.WeaponStations[0].CurrentEquipment = value;
+            _CurrentEquipment = PylonCopy;
+        }         
+    }
+    public Airplane ParentAirplane;
+    public Pylon? Pylon { get; private set; }
+    private AirplaneEquipment? _CurrentEquipment = null;
+
+    public void RemoveEquipment()
+    {
+        CurrentEquipment.Station = null;
+        CurrentEquipment = null;
     }
 
-    public static ArmamentName StringToEnum(string _WeaponStationName)
+    public void InstantiateEquipment()
     {
-        return (ArmamentName)Enum.Parse(typeof(ArmamentName), _WeaponStationName);
+        if (!IsHaveEquipment)
+            return;
+
+        GameObject Equipment = CurrentEquipment.InstantiateGameObject();
+        Equipment.transform.parent = ParentAirplane.gameObject.transform;
+        Equipment.transform.localPosition = LocalPosition;
+        Equipment.transform.localEulerAngles = Vector3.zero;
     }
 }

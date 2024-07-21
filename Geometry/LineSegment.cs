@@ -10,7 +10,7 @@ public struct LineSegment
 
     public Vector2 FirstPoint;
     public Vector2 SecondPoint;
-    public float Magnitude { get { return Vector2.Distance(FirstPoint, SecondPoint); } }
+    public float Magnitude => Vector2.Distance(FirstPoint, SecondPoint);
 
     public static bool CheckForIntersection(LineSegment _FirstLineSegment, LineSegment _SecondLineSegment, out Vector2 _IntersectionPoint)
     {
@@ -35,16 +35,13 @@ public struct LineSegment
         ((_NextToFirstCrossProduct.z > 0 && _NextToSecondCrossProduct.z < 0) ||
         (_NextToFirstCrossProduct.z < 0 && _NextToSecondCrossProduct.z > 0)))
         {
-            _IntersectionPoint = Line.CalculateIntersactionPoint(_FirstLineSegment.ToLine(), _SecondLineSegment.ToLine());
+            _IntersectionPoint = Line.CalculateIntersectionPoint(_FirstLineSegment.ToLine(), _SecondLineSegment.ToLine());
             return true;
         }
         return false;
     }
 
-    public bool CheckForIntersection(LineSegment _Other, out Vector2 _IntersectionPoint)
-    {
-        return CheckForIntersection(this, _Other, out _IntersectionPoint);
-    }
+    public bool CheckForIntersection(LineSegment _Other, out Vector2 _IntersectionPoint) => CheckForIntersection(this, _Other, out _IntersectionPoint);
 
     public static bool CheckForIntersectionWithLine(Line _Line, LineSegment _LineSegment, out Vector2 _IntersectionPoint)
     {
@@ -54,16 +51,13 @@ public struct LineSegment
         if ((_Y1 < _LineSegment.FirstPoint.y && _Y2 > _LineSegment.SecondPoint.y) || 
         (_Y1 > _LineSegment.FirstPoint.y && _Y2 < _LineSegment.SecondPoint.y))
         {
-            _IntersectionPoint = _LineSegment.ToLine().CalculateIntersactionPoint(_Line);
+            _IntersectionPoint = _LineSegment.ToLine().CalculateIntersectionPoint(_Line);
             return true;
         }
         return false;
     }
 
-    public bool CheckForIntersectionWithLine(Line _Line, out Vector2 _IntersectionPoint)
-    {
-        return CheckForIntersectionWithLine(_Line, this, out _IntersectionPoint);
-    }
+    public bool CheckForIntersectionWithLine(Line _Line, out Vector2 _IntersectionPoint) => CheckForIntersectionWithLine(_Line, this, out _IntersectionPoint);
 
     public static bool CheckForIntersection(LineSegment _CheckLineSegment, LineSegment[] _LineSegments)
     {
@@ -77,10 +71,7 @@ public struct LineSegment
         return false;
     }
 
-    public bool CheckForIntersection(LineSegment[] _LineSegments)
-    {
-        return CheckForIntersection(this, _LineSegments);
-    }
+    public bool CheckForIntersection(LineSegment[] _LineSegments) => CheckForIntersection(this, _LineSegments);
 
     public Line ToLine()
     {

@@ -6,98 +6,98 @@ public class A10C : Airplane
 {
     public A10C()
     {
-        Name = PlaneName.A10C;
-        MaxFuelMass = 4853;
-        EmptyWeight = 12000;
-        MaxWeight = 23134;
+        //Name = "A10C";
+        //MaxFuelMass = 4853;
+        //EmptyWeight = 12000;
+        //MaxWeight = 23134;
 
-        WeaponStations = new List<WeaponStation>
-        {
-            new WeaponStation
-            {
-                Number = 1,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Aim9 },
-                LocalPosition = new Vector3(-5.702f, -0.332f, -0.926f),
-                IsNeedPylon = false,
-            },
-            new WeaponStation
-            {
-                Number = 2,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Pylon, ArmamentName.Mk82, ArmamentName.Mk83,
-                ArmamentName.AGM65E, ArmamentName.AGM65F, ArmamentName.AGM84E, ArmamentName.AGM84, ArmamentName.Aim120C,ArmamentName.Aim9,
-                ArmamentName.Aim7 },
-                LocalPosition = new Vector3(-3.66f, -0.256f, -0.926f),
-                IsNeedPylon = true,
-            },
-            new WeaponStation
-            {
-                Number = 3,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Pylon, ArmamentName.Mk82, ArmamentName.Mk83,
-                ArmamentName.AGM65E, ArmamentName.AGM65F, ArmamentName.AGM84E, ArmamentName.AGM84, ArmamentName.Aim120C, ArmamentName.Aim9,
-                ArmamentName.Aim7, ArmamentName.Tank330, ArmamentName.Tank480},
-                LocalPosition = new Vector3(-2.572f, -0.217f, -0.214f),
-                IsNeedPylon = true,
-            },
-            new WeaponStation
-            {
-                Number = 4,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Aim120C, ArmamentName.Aim7, ArmamentName.TGTFLIR},
-                LocalPosition = new Vector3(-1.145f, -0.874f, -0.079f),
-                IsNeedPylon = false,
-            },
-            new WeaponStation
-            {
-                Number = 5,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Mk82, ArmamentName.Mk83, ArmamentName.Tank330},
-                LocalPosition = new Vector3(0, -0.995f, -0.079f),
-                IsNeedPylon = false,
-            },
-            new WeaponStation
-            {
-                Number = 6,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Aim120C, ArmamentName.Aim7, ArmamentName.NAVFLIR},
-                LocalPosition = new Vector3(1.145f, -0.874f, -0.079f),
-                IsNeedPylon = false,
-            },
-            new WeaponStation
-            {
-                Number = 7,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Pylon, ArmamentName.Mk82, ArmamentName.Mk83,
-                ArmamentName.AGM65E, ArmamentName.AGM65F, ArmamentName.AGM84E, ArmamentName.AGM84, ArmamentName.Aim120C, ArmamentName.Aim9,
-                ArmamentName.Aim7, ArmamentName.Tank330, ArmamentName.Tank480},
-                LocalPosition = new Vector3(2.572f, -0.217f, -0.214f),
-                IsNeedPylon = true,
-            },
-            new WeaponStation
-            {
-                Number = 8,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Pylon, ArmamentName.Mk82, ArmamentName.Mk83,
-                ArmamentName.AGM65E, ArmamentName.AGM65F, ArmamentName.AGM84E, ArmamentName.AGM84, ArmamentName.Aim120C, ArmamentName.Aim9,
-                ArmamentName.Aim7},
-                LocalPosition = new Vector3(3.66f, -0.256f, -0.926f),
-                IsNeedPylon = true,
-            },
-            new WeaponStation
-            {
-                Number = 9,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Aim9 },
-                LocalPosition = new Vector3(5.702f, -0.332f, -0.926f),
-                IsNeedPylon = false
-            },
-            new WeaponStation
-            {
-                Number = 10,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Aim9 },
-                LocalPosition = new Vector3(5.702f, -0.332f, -0.926f),
-                IsNeedPylon = false
-            },
-            new WeaponStation
-            {
-                Number = 11,
-                PossibleArmament = new List<ArmamentName> { ArmamentName.None, ArmamentName.Aim9 },
-                LocalPosition = new Vector3(5.702f, -0.332f, -0.926f),
-                IsNeedPylon = false
-            }
-        };
+        //WeaponStations = new List<WeaponStation>
+        //{
+        //    new WeaponStation
+        //    {
+        //        Number = 1,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Aim9 },
+        //        LocalPosition = new Vector3(-5.702f, -0.332f, -0.926f),
+        //        IsNeedPylon = false,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 2,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Pylon, Equipment.Mk82, Equipment.Mk83,
+        //        Equipment.AGM65E, Equipment.AGM65F, Equipment.AGM84E, Equipment.AGM84, Equipment.Aim120C,Equipment.Aim9,
+        //        Equipment.Aim7 },
+        //        LocalPosition = new Vector3(-3.66f, -0.256f, -0.926f),
+        //        IsNeedPylon = true,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 3,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Pylon, Equipment.Mk82, Equipment.Mk83,
+        //        Equipment.AGM65E, Equipment.AGM65F, Equipment.AGM84E, Equipment.AGM84, Equipment.Aim120C, Equipment.Aim9,
+        //        Equipment.Aim7, Equipment.Tank330, Equipment.Tank480},
+        //        LocalPosition = new Vector3(-2.572f, -0.217f, -0.214f),
+        //        IsNeedPylon = true,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 4,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Aim120C, Equipment.Aim7, Equipment.TGTFLIR},
+        //        LocalPosition = new Vector3(-1.145f, -0.874f, -0.079f),
+        //        IsNeedPylon = false,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 5,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Mk82, Equipment.Mk83, Equipment.Tank330},
+        //        LocalPosition = new Vector3(0, -0.995f, -0.079f),
+        //        IsNeedPylon = false,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 6,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Aim120C, Equipment.Aim7, Equipment.NAVFLIR},
+        //        LocalPosition = new Vector3(1.145f, -0.874f, -0.079f),
+        //        IsNeedPylon = false,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 7,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Pylon, Equipment.Mk82, Equipment.Mk83,
+        //        Equipment.AGM65E, Equipment.AGM65F, Equipment.AGM84E, Equipment.AGM84, Equipment.Aim120C, Equipment.Aim9,
+        //        Equipment.Aim7, Equipment.Tank330, Equipment.Tank480},
+        //        LocalPosition = new Vector3(2.572f, -0.217f, -0.214f),
+        //        IsNeedPylon = true,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 8,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Pylon, Equipment.Mk82, Equipment.Mk83,
+        //        Equipment.AGM65E, Equipment.AGM65F, Equipment.AGM84E, Equipment.AGM84, Equipment.Aim120C, Equipment.Aim9,
+        //        Equipment.Aim7},
+        //        LocalPosition = new Vector3(3.66f, -0.256f, -0.926f),
+        //        IsNeedPylon = true,
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 9,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Aim9 },
+        //        LocalPosition = new Vector3(5.702f, -0.332f, -0.926f),
+        //        IsNeedPylon = false
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 10,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Aim9 },
+        //        LocalPosition = new Vector3(5.702f, -0.332f, -0.926f),
+        //        IsNeedPylon = false
+        //    },
+        //    new WeaponStation
+        //    {
+        //        Number = 11,
+        //        PossibleEquipment = new List<Equipment> { Equipment.None, Equipment.Aim9 },
+        //        LocalPosition = new Vector3(5.702f, -0.332f, -0.926f),
+        //        IsNeedPylon = false
+        //    }
+        //};
     }
 }
